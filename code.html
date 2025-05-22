@@ -234,7 +234,16 @@
           <h3 class="product-title">${product.name}</h3>
           <p class="product-price">${formatPrice(product.price || 50000)}</p>
         `;
-        card.addEventListener('click', () => showModal(product));
+        card.addEventListener('click', async () => {
+          try {
+            const res = await fetch(`http://localhost:3000/api/product/${product.id}`);
+            const detailedProduct = await res.json();
+            showModal(detailedProduct);
+          } catch (error) {
+            console.error("Failed to load product detail:", error);
+            alert("Failed to load product detail.");
+          }
+        });
         productListEl.appendChild(card);
       });
     }
@@ -256,12 +265,22 @@
       searchInput.focus();
     }
 
-    function filterProducts() {
-      const query = searchInput.value.trim().toLowerCase();
-      const filtered = products.filter(p =>
-        p.name.toLowerCase().includes(query)
-      );
-      renderProducts(filtered);
+    async function filterProducts() {
+      const query = searchInput.value.trim();
+
+      if (!query) {
+        renderProducts(products); // jika kosong, tampilkan semua
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/product/search?q=${encodeURIComponent(query)}`);
+        const filtered = await res.json();
+        renderProducts(filtered);
+      } catch (error) {
+        console.error("Error searching products:", error);
+        productListEl.innerHTML = '<p style="color:red;">Failed to search products</p>';
+      }
     }
 
     async function fetchProductsFromBackend() {

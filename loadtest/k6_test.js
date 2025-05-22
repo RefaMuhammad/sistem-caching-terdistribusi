@@ -1,28 +1,34 @@
-// loadtest/k6_test.js
-
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-export let options = {
-  stages: [
-    { duration: '10s', target: 20 }, // Naik ke 20 pengguna selama 10 detik
-    { duration: '30s', target: 20 }, // Tahan di 20 pengguna selama 30 detik
-    { duration: '10s', target: 0 },  // Turunkan ke 0
-  ],
+export const options = {
+  vus: 50, // virtual users
+  duration: '30s', // lama pengujian
 };
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:3000/api/product';
 
 export default function () {
-  const productIds = [1, 2, 3]; // Sesuaikan dengan ID produk yang ada di backend
-  const randomId = productIds[Math.floor(Math.random() * productIds.length)];
-
-  const res = http.get(`${BASE_URL}/api/product/${randomId}`);
-
-  check(res, {
-    'status is 200': (r) => r.status === 200,
-    'body is not empty': (r) => r.body && r.body.length > 0,
+  // 1. Test ambil semua produk
+  let resAll = http.get(`${BASE_URL}/all`);
+  check(resAll, {
+    'GET /all status is 200': (r) => r.status === 200,
+    'GET /all returns array': (r) => Array.isArray(r.json()),
   });
 
-  sleep(1); // Simulasi delay antar request user
+  // 2. Test pencarian
+  let resSearch = http.get(`${BASE_URL}/search?q=iphone`);
+  check(resSearch, {
+    'GET /search status is 200': (r) => r.status === 200,
+    'GET /search returns some data': (r) => r.json().length >= 0,
+  });
+
+  // 3. Test ambil produk berdasarkan ID
+  let resById = http.get(`${BASE_URL}/1`);
+  check(resById, {
+    'GET /:id status is 200': (r) => r.status === 200,
+    'GET /:id returns correct product': (r) => r.json().id === 1,
+  });
+
+  sleep(1); // delay antar request
 }

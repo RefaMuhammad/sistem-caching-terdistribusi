@@ -2,28 +2,41 @@
 
 const express = require('express');
 const router = express.Router();
-
 // Gunakan salah satu: redisClient (single-node) atau redisClusterClient (cluster)
-const redis = require('../redisClient'); 
-// const redis = require('../redisClusterClient'); // Uncomment ini untuk test Redis Cluster
-
-// Simulasi database produk (bisa diganti dengan DB beneran nanti)
-const fakeProductDB = {
-  '1': { id: 1, name: 'iPhone 14', price: 1299 },
-  '2': { id: 2, name: 'Samsung Galaxy S23', price: 1199 },
-  '3': { id: 3, name: 'Google Pixel 8', price: 999 }
-};
+// const redis = require('../redisClient'); 
+const redis = require('../redisClusterClient'); // Uncomment ini untuk test Redis Cluster
+const fakeProductDB = require('../fakeProductDB'); // Import the fake product database
 
 router.get('/all', async (req, res) => {
   try {
-    // Misal dari "database" statis:
-    const allProducts = Object.values(fakeProductDB); // atau dari DB asli
+    // Get all products from the fake database
+    const allProducts = Object.values(fakeProductDB);
     res.json(allProducts);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
 
+// Endpoint: GET /api/product/search?q=keyword
+router.get('/search', async (req, res) => {
+  const query = req.query.q;
+
+  if (!query) {
+    return res.status(400).json({ message: 'Query parameter "q" is required' });
+  }
+
+  try {
+    const allProducts = Object.values(fakeProductDB);
+    const filtered = allProducts.filter(p =>
+      p.name.toLowerCase().includes(query.toLowerCase())
+    );
+
+    res.json(filtered);
+  } catch (err) {
+    console.error('Error in search route:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // Endpoint: GET /api/product/:id
 router.get('/:id', async (req, res) => {
@@ -31,7 +44,7 @@ router.get('/:id', async (req, res) => {
   const cacheKey = `product:${productId}`;
 
   try {
-    // Cek apakah data produk ada di Redis
+    // Check if the product data is in Redis
     const cachedData = await redis.get(cacheKey);
 
     if (cachedData) {
@@ -41,17 +54,17 @@ router.get('/:id', async (req, res) => {
 
     console.log('Cache miss');
 
-    // Ambil dari 'database'
+    // Get the product from the fake database
     const product = fakeProductDB[productId];
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Simulasi delay (misal: ambil dari database asli)
+    // Simulate delay (e.g., fetching from a real database)
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Simpan ke Redis (expired dalam 60 detik)
+    // Save to Redis (expires in 60 seconds)
     await redis.setEx(cacheKey, 60, JSON.stringify(product));
 
     return res.json(product);
