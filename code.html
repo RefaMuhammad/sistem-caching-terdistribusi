@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple E-Commerce</title>
+  <style>
+    /* Reset and base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    header {
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+      font-weight: 700;
+      color: #2c3e50;
+      font-size: 2rem;
+    }
+
+    #search-container {
+      margin-top: 1rem;
+    }
+    #search-input {
+      padding: 0.5rem 1rem;
+      width: 100%;
+      max-width: 400px;
+      font-size: 1rem;
+      border: 2px solid #2980b9;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    #search-input:focus {
+      border-color: #3498db;
+    }
+
+    main {
+      width: 100%;
+      max-width: 900px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill,minmax(220px,1fr));
+      gap: 1.2rem;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 1rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.3s ease;
+    }
+    .product-card:hover {
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+    .product-image {
+      width: 100%;
+      border-radius: 12px;
+      object-fit: cover;
+      height: 150px;
+      margin-bottom: 0.8rem;
+      background: #ecf0f1;
+    }
+    .product-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin: 0 0 0.3rem 0;
+      color: #2c3e50;
+      flex-grow: 1;
+    }
+    .product-price {
+      font-weight: 700;
+      color: #27ae60;
+      font-size: 1rem;
+    }
+
+    /* Modal styles */
+    #modal {
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    #modal.active {
+      display: flex;
+    }
+    #modal-content {
+      background: white;
+      border-radius: 14px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: slideIn 0.3s ease forwards;
+    }
+    @keyframes slideIn {
+      from {
+        transform: translateY(30px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    #modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      border: none;
+      background: transparent;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #7f8c8d;
+      transition: color 0.2s ease;
+    }
+    #modal-close:hover {
+      color: #e74c3c;
+    }
+
+    #modal-content img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      background: #ecf0f1;
+    }
+    #modal-content h2 {
+      margin-top: 0;
+      color: #2c3e50;
+      font-weight: 700;
+    }
+    #modal-content p.description {
+      font-size: 1rem;
+      line-height: 1.4;
+      color: #555;
+      margin: 0.5rem 0 1rem 0;
+    }
+    #modal-content p.price {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #27ae60;
+    }
+
+    @media (max-width: 480px) {
+      main {
+        grid-template-columns: repeat(auto-fill,minmax(160px,1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Simple E-Commerce</h1>
+    <div id="search-container">
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Search products..."
+        aria-label="Search products"
+      />
+    </div>
+  </header>
+  <main id="product-list">
+    <!-- Product cards will appear here -->
+  </main>
+
+  <!-- Modal for product detail -->
+  <div id="modal" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+    <div id="modal-content">
+      <button id="modal-close" aria-label="Close modal">&times;</button>
+      <img id="modal-image" src="" alt="" />
+      <h2 id="modal-title"></h2>
+      <p class="description" id="modal-description"></p>
+      <p class="price" id="modal-price"></p>
+    </div>
+  </div>
+
+  <script>
+    const productListEl = document.getElementById('product-list');
+    const searchInput = document.getElementById('search-input');
+    const modal = document.getElementById('modal');
+    const modalCloseBtn = document.getElementById('modal-close');
+    const modalImage = document.getElementById('modal-image');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDescription = document.getElementById('modal-description');
+    const modalPrice = document.getElementById('modal-price');
+
+    let products = [];
+
+    function formatPrice(price) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(price);
+    }
+
+    function renderProducts(productsToRender) {
+      productListEl.innerHTML = '';
+      if (productsToRender.length === 0) {
+        productListEl.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#777;">No products found.</p>';
+        return;
+      }
+      productsToRender.forEach(product => {
+        const card = document.createElement('div');
+        card.classList.add('product-card');
+        card.innerHTML = `
+          <img class="product-image" src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" />
+          <h3 class="product-title">${product.name}</h3>
+          <p class="product-price">${formatPrice(product.price || 50000)}</p>
+        `;
+        card.addEventListener('click', () => showModal(product));
+        productListEl.appendChild(card);
+      });
+    }
+
+    function showModal(product) {
+      modalImage.src = product.image || 'https://via.placeholder.com/300';
+      modalImage.alt = product.name;
+      modalTitle.textContent = product.name;
+      modalDescription.textContent = product.description || "No description available.";
+      modalPrice.textContent = formatPrice(product.price || 50000);
+      modal.classList.add('active');
+      modal.setAttribute('aria-hidden', 'false');
+      modalCloseBtn.focus();
+    }
+
+    function hideModal() {
+      modal.classList.remove('active');
+      modal.setAttribute('aria-hidden', 'true');
+      searchInput.focus();
+    }
+
+    function filterProducts() {
+      const query = searchInput.value.trim().toLowerCase();
+      const filtered = products.filter(p =>
+        p.name.toLowerCase().includes(query)
+      );
+      renderProducts(filtered);
+    }
+
+    async function fetchProductsFromBackend() {
+      try {
+        const res = await fetch('http://localhost:3000/api/product/all'); // Buat endpoint ini di backend
+        const data = await res.json();
+        products = data;
+        renderProducts(products);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        productListEl.innerHTML = '<p style="color:red;">Failed to load products</p>';
+      }
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', filterProducts);
+    modalCloseBtn.addEventListener('click', hideModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) hideModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('active')) hideModal();
+    });
+
+    // Initial fetch
+    fetchProductsFromBackend();
+  </script>
+</body>
+</html>
+
